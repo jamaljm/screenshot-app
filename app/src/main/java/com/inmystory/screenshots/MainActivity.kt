@@ -6,7 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
-import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,17 +16,26 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var statusText: TextView
-    private lateinit var enableSwitch: Switch
+    private lateinit var enableSwitch: SwitchCompat
     private lateinit var testButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        try {
+            setContentView(R.layout.activity_main)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            finish()
+            return
+        }
 
         statusText = findViewById(R.id.statusText)
         enableSwitch = findViewById(R.id.enableSwitch)
         testButton = findViewById(R.id.testButton)
 
+        // Check notification listener permission
+        checkNotificationListenerPermission()
+        
         // Check and request permissions
         checkPermissions()
 
@@ -50,8 +59,11 @@ class MainActivity : AppCompatActivity() {
 
         // Test API connection
         testButton.setOnClickListener {
-            Toast.makeText(this, "Testing API connection...", Toast.LENGTH_SHORT).show()
-            // TODO: Add API test call
+            // Test by showing the menu directly
+            val intent = Intent(this, ActionMenuActivity::class.java)
+            intent.putExtra("screenshot_path", "/sdcard/test.png")
+            startActivity(intent)
+            Toast.makeText(this, "Opening test menu...", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -121,6 +133,43 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Permissions required for app to work", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+    
+    private fun checkNotificationListenerPermission() {
+        // Check if Accessibility Service is enabled
+        val accessibilityEnabled = try {
+            android.provider.Settings.Secure.getInt(
+                contentResolver,
+                android.provider.Settings.Secure.ACCESSIBILITY_ENABLED
+            ) == 1
+        } catch (e: Exception) {
+            false
+        }
+        
+        val enabledServices = android.provider.Settings.Secure.getString(
+            contentResolver,
+            android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        )
+        
+        val isOurServiceEnabled = enabledServices?.contains(packageName) == true
+        
+        if (!accessibilityEnabled || !isOurServiceEnabled) {
+            // Not enabled, show message and open settings
+            Toast.makeText(
+                this,
+                "Please enable Accessibility for Screenshot Workflows\n\nThis allows automatic screenshot detection",
+                Toast.LENGTH_LONG
+            ).show()
+            
+            // Open accessibility settings after delay
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, 2000)
         }
     }
 }

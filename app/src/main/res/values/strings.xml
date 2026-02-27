@@ -11,4 +11,5 @@
     <string name="action_share">💬 Share to WhatsApp</string>
     <string name="action_letterboxd">🎬 Add to Letterboxd</string>
     <string name="built_for">Built for Build for India Hackathon 2026</string>
+    <string name="accessibility_service_description">Detects screenshots to show action menu. No data is collected.</string>
 </resources>

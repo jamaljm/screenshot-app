@@ -1,0 +1,26 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color purple_200
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+id enableSwitch
+id statusText
+id testButton
+layout activity_main
+string accessibility_service_description
+string action_calendar
+string action_letterboxd
+string action_organize_bill
+string action_share
+string actions_available
+string app_name
+string built_for
+string enable_detection
+string status_active
+string status_inactive
+string test_api
+xml accessibility_service_config

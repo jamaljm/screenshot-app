@@ -12,7 +12,7 @@ import java.io.File
 
 class ScreenshotDetectionService : Service() {
 
-    private var fileObserver: FileObserver? = null
+    private var screenshotObserver: ScreenshotObserver? = null
     private val NOTIFICATION_ID = 1001
     private val CHANNEL_ID = "screenshot_service"
 
@@ -24,31 +24,15 @@ class ScreenshotDetectionService : Service() {
     }
 
     private fun startWatchingScreenshots() {
-        val screenshotPaths = listOf(
-            "${Environment.getExternalStorageDirectory()}/Pictures/Screenshots",
-            "${Environment.getExternalStorageDirectory()}/Screenshots",
-            "${Environment.getExternalStorageDirectory()}/DCIM/Screenshots"
-        )
-
-        for (path in screenshotPaths) {
-            val dir = File(path)
-            if (dir.exists()) {
-                watchDirectory(dir)
-                break
-            }
+        screenshotObserver = ScreenshotObserver(this) { file ->
+            onScreenshotDetected(file)
         }
-    }
-
-    private fun watchDirectory(directory: File) {
-        fileObserver = object : FileObserver(directory.absolutePath, CREATE) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path != null && (path.endsWith(".png") || path.endsWith(".jpg"))) {
-                    val screenshotFile = File(directory, path)
-                    onScreenshotDetected(screenshotFile)
-                }
-            }
-        }
-        fileObserver?.startWatching()
+        screenshotObserver?.register()
+        
+        // Update notification
+        val notification = createNotification("Active - Watching for screenshots")
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun onScreenshotDetected(file: File) {
@@ -95,7 +79,7 @@ class ScreenshotDetectionService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        fileObserver?.stopWatching()
+        screenshotObserver?.unregister()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

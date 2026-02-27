@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="accessibility_service_description">Detects screenshots to show action menu. No data is collected.</string>
+    <string name="action_calendar">📅 Add to Calendar</string>
+    <string name="action_letterboxd">🎬 Add to Letterboxd</string>
+    <string name="action_organize_bill">📁 Organize Bills</string>
+    <string name="action_share">💬 Share to WhatsApp</string>
+    <string name="actions_available">Actions Available:</string>
+    <string name="app_name">Screenshot Workflows</string>
+    <string name="built_for">Built for Build for India Hackathon 2026</string>
+    <string name="enable_detection">Enable Screenshot Detection</string>
+    <string name="status_active">✓ Active - Monitoring screenshots</string>
+    <string name="status_inactive">✗ Inactive - Enable to start</string>
+    <string name="test_api">Test API Connection</string>
+</resources>

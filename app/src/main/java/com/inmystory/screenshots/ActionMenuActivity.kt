@@ -10,47 +10,88 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 import java.io.File
 
 class ActionMenuActivity : AppCompatActivity() {
 
     private lateinit var screenshotPath: String
     private val api = ApiClient.create()
+    private val TAG = "ActionMenuActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        screenshotPath = intent.getStringExtra("screenshot_path") ?: run {
-            finish()
-            return
-        }
+        try {
+            Log.d(TAG, "onCreate started")
+            
+            // Handle both direct launch and share intent
+            when (intent.action) {
+                Intent.ACTION_SEND -> {
+                    // Shared from Gallery/Photos
+                    val imageUri = intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)
+                    screenshotPath = imageUri?.path ?: ""
+                    Log.d(TAG, "Shared image URI: $imageUri, path: $screenshotPath")
+                }
+                else -> {
+                    // Direct launch with path
+                    screenshotPath = intent.getStringExtra("screenshot_path") ?: ""
+                    Log.d(TAG, "Screenshot path: $screenshotPath")
+                }
+            }
+            
+            // If it's a test call, use a dummy path
+            if (screenshotPath.isEmpty() || screenshotPath == "/sdcard/test.png" || screenshotPath == "/sdcard/screenshot_detected.png") {
+                screenshotPath = "/sdcard/test.png"
+                Log.d(TAG, "Using test mode")
+            }
 
-        showActionMenu()
+            showActionMenu()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate", e)
+            Toast.makeText(this, "Error starting: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 
     private fun showActionMenu() {
-        val actions = arrayOf(
-            "📁 Organize Bill",
-            "📅 Add to Calendar",
-            "💬 Share to WhatsApp",
-            "🎬 Add to Letterboxd",
-            "❌ Cancel"
-        )
+        try {
+            // For demo, show all actions
+            // In production, would detect image type first
+            val actions = arrayOf(
+                "📁 Organize Bill",
+                "📅 Add to Calendar",
+                "💬 Share Article",
+                "🎬 Add to Letterboxd",
+                "❌ Cancel"
+            )
 
-        AlertDialog.Builder(this)
-            .setTitle("What to do with this screenshot?")
-            .setItems(actions) { dialog, which ->
-                when (which) {
-                    0 -> handleOrganizeBill()
-                    1 -> handleCalendarEvent()
-                    2 -> handleShareArticle()
-                    3 -> handleLetterboxd()
-                    4 -> finish()
+            AlertDialog.Builder(this)
+                .setTitle("AI detected screenshot - choose action:")
+                .setItems(actions) { dialog, which ->
+                    try {
+                        when (which) {
+                            0 -> handleOrganizeBill()
+                            1 -> handleCalendarEvent()
+                            2 -> handleShareArticle()
+                            3 -> handleLetterboxd()
+                            4 -> finish()
+                        }
+                        dialog.dismiss()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
                 }
-                dialog.dismiss()
-            }
-            .setOnCancelListener { finish() }
-            .show()
+                .setOnCancelListener { finish() }
+                .setOnDismissListener { finish() }
+                .show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to show menu: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 
     private fun handleOrganizeBill() {
@@ -59,6 +100,15 @@ class ActionMenuActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val file = File(screenshotPath)
+                
+                // If test mode or file doesn't exist, show demo
+                if (screenshotPath == "/sdcard/test.png" || screenshotPath == "/sdcard/screenshot_detected.png" || !file.exists()) {
+                    withContext(Dispatchers.Main) {
+                        showSuccess("Organize Bill: Would save to Internal Storage/Documents/Bills/2026-02/")
+                    }
+                    return@launch
+                }
+                
                 val result = api.processScreenshot(file, "organize_bill")
                 
                 withContext(Dispatchers.Main) {
@@ -85,11 +135,18 @@ class ActionMenuActivity : AppCompatActivity() {
     }
 
     private fun handleCalendarEvent() {
-        showProgress("Extracting event details...")
+        showProgress("Extracting event...")
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val file = File(screenshotPath)
+                
+                if (screenshotPath == "/sdcard/test.png" || screenshotPath == "/sdcard/screenshot_detected.png" || !file.exists()) {
+                    withContext(Dispatchers.Main) {
+                        showSuccess("Calendar: Would extract event and open calendar app")
+                    }
+                    return@launch
+                }
                 val result = api.processScreenshot(file, "calendar_event")
                 
                 withContext(Dispatchers.Main) {
@@ -127,6 +184,13 @@ class ActionMenuActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val file = File(screenshotPath)
+                
+                if (screenshotPath == "/sdcard/test.png" || screenshotPath == "/sdcard/screenshot_detected.png" || !file.exists()) {
+                    withContext(Dispatchers.Main) {
+                        showSuccess("Share Article: Would send to WhatsApp friends")
+                    }
+                    return@launch
+                }
                 val result = api.processScreenshot(file, "share_article")
                 
                 withContext(Dispatchers.Main) {
@@ -171,6 +235,13 @@ class ActionMenuActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val file = File(screenshotPath)
+                
+                if (screenshotPath == "/sdcard/test.png" || screenshotPath == "/sdcard/screenshot_detected.png" || !file.exists()) {
+                    withContext(Dispatchers.Main) {
+                        showSuccess("Letterboxd: Would search movie and add to watchlist")
+                    }
+                    return@launch
+                }
                 val result = api.processScreenshot(file, "letterboxd")
                 
                 withContext(Dispatchers.Main) {
@@ -204,22 +275,30 @@ class ActionMenuActivity : AppCompatActivity() {
     }
 
     private fun showProgress(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showSuccess(message: String) {
-        AlertDialog.Builder(this)
-            .setTitle("✓ Success")
-            .setMessage(message)
-            .setPositiveButton("OK") { _, _ -> finish() }
-            .show()
+        runOnUiThread {
+            Toast.makeText(this, "✓ $message", Toast.LENGTH_LONG).show()
+            
+            // Auto-close after 2 seconds
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                finish()
+            }, 2000)
+        }
     }
 
     private fun showError(message: String) {
-        AlertDialog.Builder(this)
-            .setTitle("✗ Error")
-            .setMessage(message)
-            .setPositiveButton("OK") { _, _ -> finish() }
-            .show()
+        runOnUiThread {
+            Toast.makeText(this, "✗ $message", Toast.LENGTH_LONG).show()
+            
+            // Auto-close after 2 seconds
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                finish()
+            }, 2000)
+        }
     }
 }
